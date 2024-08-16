@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 import { Todo } from '../types/Todo';
 import { TodoHeader } from './TodoHeader';
@@ -56,17 +56,20 @@ export const TodoApp: React.FC = () => {
       });
   };
 
-  const delTodo: (id: number) => Promise<void> = (id: number) => {
-    return deleteTodo(id)
-      .then(() => {
-        setTodos(currentTodos => currentTodos.filter(todo => todo.id !== id));
-        inputField.current?.focus();
-      })
-      .catch((error: unknown) => {
-        showError(Errors.DeleteTodo);
-        throw error;
-      });
-  };
+  const delTodo = useCallback(
+    (id: number): Promise<void> => {
+      return deleteTodo(id)
+        .then(() => {
+          setTodos(currentTodos => currentTodos.filter(todo => todo.id !== id));
+          inputField.current?.focus();
+        })
+        .catch((error: unknown) => {
+          showError(Errors.DeleteTodo);
+          throw error;
+        });
+    },
+    [deleteTodo, setTodos, inputField, showError],
+  );
 
   const updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo> = (
     id: number,
