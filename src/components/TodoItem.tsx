@@ -6,21 +6,29 @@ import { EditForm } from './EditForm';
 
 interface Props {
   todo: Todo;
-  loadingTodosIds: number[];
   deleteTodo: (id: number) => Promise<void>;
   updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo>;
+  loadingTodosIds: number[];
   setLoadingTodosIds: (todos: number[]) => void;
 }
 
 export const TodoItem: React.FC<Props> = ({
   todo,
-  loadingTodosIds,
   deleteTodo,
   updtTodo,
+  loadingTodosIds,
   setLoadingTodosIds,
 }) => {
   const { title, completed } = todo;
   const [editTodo, setEditTodo] = useState<Todo | null>(null);
+
+  const handleDeleteTodo = (id: number) => {
+    setLoadingTodosIds([...loadingTodosIds, todo.id]);
+
+    deleteTodo(id).finally(() =>
+      setLoadingTodosIds(loadingTodosIds.filter(ids => ids !== todo.id)),
+    );
+  };
 
   const handleChangeCheckbox = () => {
     setLoadingTodosIds([...loadingTodosIds, todo.id]);
@@ -34,16 +42,10 @@ export const TodoItem: React.FC<Props> = ({
     );
   };
 
+  const isTodoLoading = loadingTodosIds.includes(todo.id);
+
   const handleOnDoubleClick = () => {
     setEditTodo(todo);
-  };
-
-  const handleDeleteButton = () => {
-    setLoadingTodosIds([...loadingTodosIds, todo.id]);
-
-    deleteTodo(todo.id).finally(() =>
-      setLoadingTodosIds(loadingTodosIds.filter(ids => ids !== todo.id)),
-    );
   };
 
   return (
@@ -59,8 +61,8 @@ export const TodoItem: React.FC<Props> = ({
           data-cy="TodoStatus"
           type="checkbox"
           className="todo__status"
-          checked={completed}
           onChange={handleChangeCheckbox}
+          checked={completed}
         />
       </label>
 
@@ -69,10 +71,9 @@ export const TodoItem: React.FC<Props> = ({
           editTodo={editTodo}
           loadingTodosIds={loadingTodosIds}
           updtTodo={updtTodo}
-          deleteTodo={deleteTodo}
           setEditTodo={setEditTodo}
           setLoadingTodosIds={setLoadingTodosIds}
-          todo={todo}
+          deleteTodo={deleteTodo}
         />
       ) : (
         <>
@@ -84,16 +85,19 @@ export const TodoItem: React.FC<Props> = ({
             type="button"
             className="todo__remove"
             data-cy="TodoDelete"
-            onClick={handleDeleteButton}
+            onClick={() => handleDeleteTodo(todo.id)}
           >
             ×
           </button>
         </>
       )}
 
-      {loadingTodosIds && (
-        <Loader loadingTodosIds={loadingTodosIds} todo={todo} />
-      )}
+      <div data-cy="TodoLoader" className="modal overlay">
+        <div className="modal-background has-background-white-ter" />
+        <div className="loader" />
+      </div>
+
+      {isTodoLoading && <Loader isLoading={isTodoLoading} />}
     </div>
   );
 };

@@ -7,8 +7,7 @@ interface Props {
   filterSelected: FilteredTodos;
   activeTodos: Todo[];
   completedTodos: Todo[];
-  deleteTodo: (id: number) => Promise<void>;
-  setLoadingTodosIds: (todos: number[]) => void;
+  onCompleteDelete: () => void;
 }
 
 export const TodoFooter: React.FC<Props> = ({
@@ -16,23 +15,15 @@ export const TodoFooter: React.FC<Props> = ({
   filterSelected,
   activeTodos,
   completedTodos,
-  deleteTodo,
-  setLoadingTodosIds,
+  onCompleteDelete,
 }) => {
-  const handleDeleteCompletedTodos = () => {
-    setLoadingTodosIds(completedTodos.map(todo => todo.id));
-
-    Promise.all(completedTodos.map(todo => deleteTodo(todo.id))).finally(() => {
-      setLoadingTodosIds([]);
-    });
-  };
-
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
         {activeTodos.length} items left
       </span>
 
+      {/* Active link should have the 'selected' class */}
       <TodoFilter
         setFilterSelected={setFilterSelected}
         filterSelected={filterSelected}
@@ -43,7 +34,7 @@ export const TodoFooter: React.FC<Props> = ({
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
         disabled={completedTodos.length === 0}
-        onClick={handleDeleteCompletedTodos}
+        onClick={() => onCompleteDelete()}
       >
         Clear completed
       </button>

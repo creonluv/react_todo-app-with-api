@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 import { Todo } from '../types/Todo';
 import { TodoHeader } from './TodoHeader';
@@ -7,35 +7,28 @@ import { TodoFooter } from './TodoFooter';
 import { Errors } from '../enums/Errors';
 import { ErrorNotification } from './ErrorNotification';
 import { FilteredTodos } from '../enums/FilteredTodos';
-
-const handleFilteredTodos = (todos: Todo[], filterSelected: FilteredTodos) => {
-  switch (filterSelected) {
-    case FilteredTodos.active:
-      return todos.filter(todo => !todo.completed);
-    case FilteredTodos.completed:
-      return todos.filter(todo => todo.completed);
-    default:
-      return todos;
-  }
-};
+import handleFilteredTodos from '../utils/handleFilteredTodos';
 
 export const TodoApp: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [errorMessage, setErrorMessage] = useState<Errors | null>(null);
+  const [loadingTodosIds, setLoadingTodosIds] = useState<number[]>([]);
   const [filterSelected, setFilterSelected] = useState<FilteredTodos>(
     FilteredTodos.all,
   );
-  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const [loadingTodosIds, setLoadingTodosIds] = useState<number[]>([]);
-  const [focusInput, setFocusInput] = useState(false);
+  const inputField = useRef<HTMLInputElement>(null);
 
   const preparedTodos = handleFilteredTodos(todos, filterSelected);
   const activeTodos = handleFilteredTodos(todos, FilteredTodos.active);
   const completedTodos = handleFilteredTodos(todos, FilteredTodos.completed);
-  const isAllSelected = todos.every(todo => todo.completed);
 
   const clearErrorMessage = () => {
     setErrorMessage(null);
+  };
+
+  const showError = (error: Errors) => {
+    setErrorMessage(error);
   };
 
   useEffect(() => {
@@ -47,11 +40,9 @@ export const TodoApp: React.FC = () => {
   }, [errorMessage, setErrorMessage]);
 
   useEffect(() => {
-    setFocusInput(true);
-
     getTodos()
       .then(setTodos)
-      .catch(() => setErrorMessage(Errors.LoadTodos));
+      .catch(() => showError(Errors.LoadTodos));
   }, []);
 
   const addTodo = (newTodo: Omit<Todo, 'id'>) => {
@@ -59,22 +50,21 @@ export const TodoApp: React.FC = () => {
       .then(todo => {
         setTodos(currentTodos => [...currentTodos, todo]);
       })
-      .catch(() => setErrorMessage(Errors.AddTodo));
+      .catch(error => {
+        showError(Errors.AddTodo);
+        throw error;
+      });
   };
 
   const delTodo: (id: number) => Promise<void> = (id: number) => {
-    setLoadingTodosIds([id]);
-
     return deleteTodo(id)
       .then(() => {
         setTodos(currentTodos => currentTodos.filter(todo => todo.id !== id));
-        setFocusInput(true);
+        inputField.current?.focus();
       })
-      .catch(() => {
-        setErrorMessage(Errors.DeleteTodo);
-      })
-      .finally(() => {
-        setLoadingTodosIds([]);
+      .catch((error: unknown) => {
+        showError(Errors.DeleteTodo);
+        throw error;
       });
   };
 
@@ -101,30 +91,11 @@ export const TodoApp: React.FC = () => {
       });
   };
 
-  const handleToggleAll = () => {
-    setLoadingTodosIds(todos.map(todo => todo.id));
-
-    let todosToUpdate;
-
-    if (isAllSelected) {
-      todosToUpdate = todos.map(todo =>
-        updtTodo(todo.id, { completed: false }),
-      );
-    } else {
-      todosToUpdate = todos
-        .filter(todo => !todo.completed)
-        .map(todo => updtTodo(todo.id, { completed: true }));
-    }
-
-    Promise.all(todosToUpdate)
-      .catch(error => {
-        setErrorMessage(Errors.UpdateTodo);
-        throw error;
-      })
-      .finally(() => {
-        setLoadingTodosIds([]);
-      });
-  };
+  const onCompleteDelete = useMemo(() => {
+    return () => {
+      todos.filter(todo => todo.completed).forEach(todo => delTodo(todo.id));
+    };
+  }, [todos]);
 
   return (
     <div className="todoapp">
@@ -132,36 +103,34 @@ export const TodoApp: React.FC = () => {
 
       <div className="todoapp__content">
         <TodoHeader
-          todos={todos}
           addTodo={addTodo}
-          setErrorMessage={setErrorMessage}
+          preparedTodos={preparedTodos}
           setTempTodo={setTempTodo}
-          loadingTodosIds={loadingTodosIds}
-          setFocusInput={setFocusInput}
-          focusInput={focusInput}
+          setErrorMessage={setErrorMessage}
           clearErrorMessage={clearErrorMessage}
+          inputField={inputField}
+          loadingTodosIds={loadingTodosIds}
           setLoadingTodosIds={setLoadingTodosIds}
-          handleToggleAll={handleToggleAll}
-          isAllSelected={isAllSelected}
+          updtTodo={updtTodo}
+          todos={todos}
         />
 
         <TodoList
-          preparedTodos={preparedTodos}
-          loadingTodosIds={loadingTodosIds}
-          tempTodo={tempTodo}
           deleteTodo={delTodo}
+          tempTodo={tempTodo}
+          preparedTodos={preparedTodos}
           updtTodo={updtTodo}
+          loadingTodosIds={loadingTodosIds}
           setLoadingTodosIds={setLoadingTodosIds}
         />
 
         {todos.length > 0 && (
           <TodoFooter
-            deleteTodo={delTodo}
             filterSelected={filterSelected}
             setFilterSelected={setFilterSelected}
             activeTodos={activeTodos}
             completedTodos={completedTodos}
-            setLoadingTodosIds={setLoadingTodosIds}
+            onCompleteDelete={onCompleteDelete}
           />
         )}
       </div>

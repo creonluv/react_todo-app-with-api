@@ -1,84 +1,75 @@
 import classNames from 'classnames';
-import React, { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Todo } from '../types/Todo';
 import { Errors } from '../enums/Errors';
-import { USER_ID } from '../api/todos';
 
 interface Props {
   todos: Todo[];
+  preparedTodos: Todo[];
+  setTempTodo: (tempTodo: Todo | null) => void;
   addTodo: (todo: Omit<Todo, 'id'>) => Promise<void>;
   setErrorMessage: (error: Errors | null) => void;
-  setTempTodo: (tempTodo: Todo | null) => void;
+  clearErrorMessage: () => void;
+  inputField: React.RefObject<HTMLInputElement>;
   loadingTodosIds: number[];
   setLoadingTodosIds: (todos: number[]) => void;
-  setFocusInput: (bool: boolean) => void;
-  focusInput: boolean;
-  clearErrorMessage: () => void;
-  handleToggleAll: () => void;
-  isAllSelected: boolean;
+  updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo>;
 }
 
 export const TodoHeader: React.FC<Props> = ({
   todos,
+  preparedTodos,
+  setTempTodo,
   addTodo,
   setErrorMessage,
-  setTempTodo,
+  clearErrorMessage,
   loadingTodosIds,
   setLoadingTodosIds,
-  setFocusInput,
-  focusInput,
-  clearErrorMessage,
-  handleToggleAll,
-  isAllSelected,
+  inputField,
+  updtTodo,
 }) => {
-  const [newTodoTitle, setNewTodoTitle] = React.useState('');
-
-  const inputField = React.useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (inputField.current) {
-      inputField.current.focus();
-      setFocusInput(false);
-    }
-  }, [setFocusInput]);
-
-  useEffect(() => {
-    if (inputField.current && focusInput) {
-      inputField.current.focus();
-      setFocusInput(false);
-    }
-  }, [focusInput, setFocusInput]);
+  const [newTodoTitle, setNewTodoTitle] = useState('');
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewTodoTitle(event.target.value);
   };
 
-  const onFormSubmit = (event: React.FormEvent) => {
+  const isToggleAllChecked = useMemo(() => {
+    return preparedTodos.every(todo => todo.completed);
+  }, [preparedTodos]);
+
+  useEffect(() => {
+    if (loadingTodosIds.length === 0) {
+      inputField.current?.focus();
+    }
+  }, [loadingTodosIds]);
+
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
     clearErrorMessage();
 
     if (!newTodoTitle.trim()) {
       setErrorMessage(Errors.EmptyTitle);
+      inputField.current?.focus();
 
       return;
     }
 
     const newTodo = {
-      userId: USER_ID,
+      userId: 11946,
       title: newTodoTitle.trim(),
       completed: false,
     };
 
     const tempTodo = {
       id: 0,
-      userId: USER_ID,
+      userId: 11946,
       title: newTodoTitle.trim(),
       completed: false,
     };
 
     setTempTodo(tempTodo);
-
     setLoadingTodosIds([...loadingTodosIds, tempTodo.id]);
 
     addTodo(newTodo)
@@ -88,7 +79,32 @@ export const TodoHeader: React.FC<Props> = ({
       .finally(() => {
         setTempTodo(null);
         setLoadingTodosIds(loadingTodosIds.filter(id => id !== tempTodo.id));
-        setFocusInput(true);
+        inputField.current?.focus();
+      });
+  };
+
+  const handleToggleAll = () => {
+    setLoadingTodosIds(preparedTodos.map(todo => todo.id));
+
+    let todosToUpdate = [];
+
+    if (isToggleAllChecked) {
+      todosToUpdate = preparedTodos.map(todo =>
+        updtTodo(todo.id, { completed: false }),
+      );
+    } else {
+      todosToUpdate = todos
+        .filter(todo => !todo.completed)
+        .map(todo => updtTodo(todo.id, { completed: true }));
+    }
+
+    Promise.all(todosToUpdate)
+      .catch(error => {
+        setErrorMessage(Errors.UpdateTodo);
+        throw error;
+      })
+      .finally(() => {
+        setLoadingTodosIds([]);
       });
   };
 
@@ -98,23 +114,24 @@ export const TodoHeader: React.FC<Props> = ({
         <button
           type="button"
           className={classNames('todoapp__toggle-all', {
-            active: isAllSelected,
+            active: isToggleAllChecked,
           })}
-          data-cy="ToggleAllButton"
           onClick={handleToggleAll}
+          data-cy="ToggleAllButton"
         />
       )}
 
-      <form onSubmit={onFormSubmit}>
+      {/* Add a todo on form submit */}
+      <form onSubmit={handleSubmit}>
         <input
           data-cy="NewTodoField"
           type="text"
+          ref={inputField}
           className="todoapp__new-todo"
           placeholder="What needs to be done?"
-          value={newTodoTitle}
           disabled={loadingTodosIds.length !== 0}
+          value={newTodoTitle}
           onChange={handleInputChange}
-          ref={inputField}
         />
       </form>
     </header>

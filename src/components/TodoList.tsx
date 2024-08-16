@@ -3,19 +3,19 @@ import { TodoItem } from './TodoItem';
 
 interface Props {
   preparedTodos: Todo[];
-  loadingTodosIds: number[];
   tempTodo: null | Todo;
   deleteTodo: (id: number) => Promise<void>;
   updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo>;
+  loadingTodosIds: number[];
   setLoadingTodosIds: (todos: number[]) => void;
 }
 
 export const TodoList: React.FC<Props> = ({
-  preparedTodos,
-  loadingTodosIds,
-  tempTodo,
   deleteTodo,
+  tempTodo,
+  preparedTodos,
   updtTodo,
+  loadingTodosIds,
   setLoadingTodosIds,
 }) => {
   return (
@@ -26,23 +26,21 @@ export const TodoList: React.FC<Props> = ({
           key={todo.id}
           todo={todo}
           deleteTodo={deleteTodo}
-          loadingTodosIds={loadingTodosIds}
           updtTodo={updtTodo}
+          loadingTodosIds={loadingTodosIds}
           setLoadingTodosIds={setLoadingTodosIds}
         />
       ))}
 
       {tempTodo && (
-        <>
-          <TodoItem
-            key={tempTodo.id}
-            todo={tempTodo}
-            loadingTodosIds={loadingTodosIds}
-            deleteTodo={deleteTodo}
-            updtTodo={updtTodo}
-            setLoadingTodosIds={setLoadingTodosIds}
-          />
-        </>
+        <TodoItem
+          key={tempTodo.id}
+          deleteTodo={deleteTodo}
+          todo={tempTodo}
+          updtTodo={updtTodo}
+          loadingTodosIds={loadingTodosIds}
+          setLoadingTodosIds={setLoadingTodosIds}
+        />
       )}
     </section>
   );

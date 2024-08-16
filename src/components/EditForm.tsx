@@ -4,29 +4,35 @@ import { Loader } from './Loader';
 
 type Props = {
   editTodo: Todo | null;
-  updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo>;
-  deleteTodo: (id: number) => Promise<void>;
-  setLoadingTodosIds: (todos: number[]) => void;
-  loadingTodosIds: number[];
-  todo: Todo;
   setEditTodo: (todo: Todo | null) => void;
+  updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo>;
+  loadingTodosIds: number[];
+  setLoadingTodosIds: (todos: number[]) => void;
+  deleteTodo: (id: number) => Promise<void>;
 };
 
 export const EditForm: React.FC<Props> = ({
   editTodo,
-  updtTodo,
-  deleteTodo,
-  setLoadingTodosIds,
-  loadingTodosIds,
-  todo,
   setEditTodo,
+  updtTodo,
+  loadingTodosIds,
+  setLoadingTodosIds,
+  deleteTodo,
 }) => {
   const [newValue, setNewValue] = useState(editTodo?.title || '');
   const editField = useRef<HTMLInputElement>(null);
 
+  const isTodoLoading = editTodo
+    ? loadingTodosIds.includes(editTodo.id)
+    : false;
+
   useEffect(() => {
     editField.current?.focus();
   }, []);
+
+  const onKeyEscape = () => {
+    setEditTodo(null);
+  };
 
   const prevValue = editTodo?.title || '';
 
@@ -41,12 +47,13 @@ export const EditForm: React.FC<Props> = ({
 
     if (editTodo) {
       setLoadingTodosIds([...loadingTodosIds, editTodo.id]);
+
       updtTodo(editTodo.id, { title: newValue?.trim() })
         .then(() => {
           setEditTodo(null);
         })
         .catch(() => {
-          setEditTodo(todo);
+          setEditTodo(editTodo);
         })
         .finally(() =>
           setLoadingTodosIds(loadingTodosIds.filter(id => id !== editTodo.id)),
@@ -68,10 +75,6 @@ export const EditForm: React.FC<Props> = ({
     }
 
     handleSubmit(event);
-  };
-
-  const onKeyEscape = () => {
-    setEditTodo(null);
   };
 
   const onKeyEnter = (event: React.KeyboardEvent) => {
@@ -105,7 +108,7 @@ export const EditForm: React.FC<Props> = ({
 
   return (
     <>
-      <form onSubmit={handleSubmit}>
+      <form>
         <input
           data-cy="TodoTitleField"
           type="text"
@@ -113,13 +116,13 @@ export const EditForm: React.FC<Props> = ({
           placeholder="Empty todo will be deleted"
           value={newValue}
           ref={editField}
-          onChange={event => setNewValue(event.target.value)}
           onBlur={handleOnBlur}
+          onChange={event => setNewValue(event.target.value)}
           onKeyDown={onKeyDownHandle}
         />
       </form>
 
-      <Loader loadingTodosIds={loadingTodosIds} todo={todo} />
+      {isTodoLoading && <Loader isLoading={isTodoLoading} />}
     </>
   );
 };
