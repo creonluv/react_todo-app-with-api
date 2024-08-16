@@ -68,7 +68,7 @@ export const TodoApp: React.FC = () => {
           throw error;
         });
     },
-    [deleteTodo, setTodos, inputField, showError],
+    [setTodos, inputField, showError],
   );
 
   const updtTodo: (id: number, data: Partial<Todo>) => Promise<Todo> = (
