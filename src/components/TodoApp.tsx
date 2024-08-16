@@ -95,7 +95,7 @@ export const TodoApp: React.FC = () => {
     return () => {
       todos.filter(todo => todo.completed).forEach(todo => delTodo(todo.id));
     };
-  }, [todos]);
+  }, [todos, delTodo]);
 
   return (
     <div className="todoapp">

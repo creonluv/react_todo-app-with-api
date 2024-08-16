@@ -42,7 +42,7 @@ export const TodoHeader: React.FC<Props> = ({
     if (loadingTodosIds.length === 0) {
       inputField.current?.focus();
     }
-  }, [loadingTodosIds]);
+  }, [loadingTodosIds, inputField]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
